@@ -1,4 +1,5 @@
 <?php
+App::uses('Component', 'Controller');
 class WizardComponent extends Component {
 
 /**
