@@ -123,7 +123,7 @@ class WizardComponent extends Component {
 
 /**
  * Finds the last completed step stored in the session and returns
- * the next step. If no steps were completed, it returns the first step.
+ * the next step. If no steps were previously completed it returns the first step.
  *
  * @return array
  */
@@ -182,7 +182,7 @@ class WizardComponent extends Component {
 		return $this->Session->write($key, $val);
 	}
 
-	public function reset($key = null) {
+	public function reset() {
 		return $this->Session->delete($this->config['sessionKey']);
 	}
 
