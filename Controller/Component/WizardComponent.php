@@ -54,18 +54,28 @@ class WizardComponent extends Component {
 		}
 
 		$this->_setStep($this->request->here);
-
 		if ($this->request->is(array('post', 'put'))) {
-			$this->process($this->request->here);
+			return $this->process($this->request->here);
 		}
-		if ($this->request->is('get')) {
-			if (!$this->_canAccessStep($this->request->here)) {
-				$expectedStep = $this->getExpectedStep();
-				return $this->controller->redirect($expectedStep['url']);
-			}
+
+		if (!$this->_canAccessStep($this->request->here)) {
+			$expectedStep = $this->getExpectedStep();
+			return $this->controller->redirect($expectedStep['url']);
 		}
 
 		$this->request->data = $this->data();
+
+		if ($this->isDisabled($this->request->here)) {
+			return $this->process($this->request->here);
+		}
+	}
+
+	public function isDisabled($url) {
+		$step = $this->getStep($url);
+		if (is_callable($step['disabled'])) {
+			$step['disabled'] = call_user_func($step['disabled']);
+		}
+		return (bool)$step['disabled'];
 	}
 
 	public function process($url) {
@@ -97,11 +107,25 @@ class WizardComponent extends Component {
 		$options += array(
 			'name' => '',
 			'description' => '',
-			'url' => null,
-			'hidden' => false
+			'action' => null,
+			'hidden' => false,
+			'disabled' => false
 		);
-		$options['url'] = Router::url($options['url']);
+
+		$options['url'] = Router::url(array(
+			'action' => $options['action']
+		));
+		unset($options['action']);
+
 		$this->config['steps'][] = $options;
+	}
+
+	public function getStep($url) {
+		$index = $this->getIndex($url);
+		if (isset($this->config['steps'][$index])) {
+			return $this->config['steps'][$index];
+		}
+		return false;
 	}
 
 /**
@@ -118,6 +142,7 @@ class WizardComponent extends Component {
 				'completed' => $index < $this->_index,
 				'active' => $index == $this->_index
 			);
+			$steps[$index]['disabled'] = $this->isDisabled($step['url']);
 		}
 		return $steps;
 	}
@@ -147,8 +172,10 @@ class WizardComponent extends Component {
 	}
 
 	public function getPreviousStep() {
-		if (isset($this->config['steps'][$this->_index - 1])) {
-			return $this->config['steps'][$this->_index - 1];
+		for ($i = $this->_index - 1; $i >= 0; $i--) {
+			if (!$this->isDisabled($this->config['steps'][$i]['url'])) {
+				return $this->config['steps'][$i];
+			}
 		}
 		return false;
 	}
