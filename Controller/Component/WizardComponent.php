@@ -49,13 +49,8 @@ class WizardComponent extends Component {
 	}
 
 	public function startup(Controller $controller) {
-		if (!$this->isStep($this->request->here)) {
-			return;
-		}
-
-		$this->_setStep($this->request->here);
-		if ($this->request->is(array('post', 'put'))) {
-			return $this->process($this->request->here);
+		if (!$this->_setStep($this->request->here)) {
+			return false;
 		}
 
 		if (!$this->_canAccessStep($this->request->here)) {
@@ -63,9 +58,9 @@ class WizardComponent extends Component {
 			return $this->controller->redirect($expectedStep['url']);
 		}
 
-		$this->request->data = $this->data();
+		$this->request->data = Hash::merge($this->data(), $this->request->data);
 
-		if ($this->isDisabled($this->request->here)) {
+		if ($this->request->is(array('post', 'put')) || $this->isDisabled($this->request->here)) {
 			return $this->process($this->request->here);
 		}
 	}
@@ -86,9 +81,7 @@ class WizardComponent extends Component {
 
 		$callback = sprintf('_process_%s', $this->request->params['action']);
 		if (method_exists($this->controller, $callback)) {
-			$this->request->data = Hash::merge($this->data(), $this->request->data);
 			$result = $this->controller->$callback();
-			$this->data($this->_index, $this->request->data);
 			if ($result === false) {
 				return false;
 			}
@@ -166,15 +159,19 @@ class WizardComponent extends Component {
 
 	public function getNextStep() {
 		if (isset($this->config['steps'][$this->_index + 1])) {
-			return $this->config['steps'][$this->_index + 1];
+			$step = $this->config['steps'][$this->_index + 1];
+			$step['disabled'] = $this->isDisabled($step['url']);
+			return $step;
 		}
 		return false;
 	}
 
 	public function getPreviousStep() {
 		for ($i = $this->_index - 1; $i >= 0; $i--) {
-			if (!$this->isDisabled($this->config['steps'][$i]['url'])) {
-				return $this->config['steps'][$i];
+			$step = $this->config['steps'][$i];
+			$step['disabled'] = $this->isDisabled($step['url']);
+			if (!$step['disabled']) {
+				return $step;
 			}
 		}
 		return false;
