@@ -65,6 +65,14 @@ class WizardComponent extends Component {
 		}
 	}
 
+	public function isHidden($url) {
+		$step = $this->getStep($url);
+		if (is_callable($step['hidden'])) {
+			$step['hidden'] = call_user_func($step['hidden']);
+		}
+		return (bool)$step['hidden'];
+	}
+
 	public function isDisabled($url) {
 		$step = $this->getStep($url);
 		if (is_callable($step['disabled'])) {
@@ -127,17 +135,20 @@ class WizardComponent extends Component {
 	public function getSteps() {
 		$steps = $this->config['steps'];
 		foreach ($steps as $index => $step) {
-			if ($step['hidden']) {
+			$steps[$index]['hidden'] = $this->isHidden($step['url']);
+			if ($steps[$index]['hidden']) {
 				unset($steps[$index]);
 				continue;
 			}
+
 			$steps[$index] += array(
 				'completed' => $index < $this->_index,
 				'active' => $index == $this->_index
 			);
+
 			$steps[$index]['disabled'] = $this->isDisabled($step['url']);
 		}
-		return $steps;
+		return array_values($steps);
 	}
 
 /**
@@ -160,6 +171,7 @@ class WizardComponent extends Component {
 	public function getNextStep() {
 		if (isset($this->config['steps'][$this->_index + 1])) {
 			$step = $this->config['steps'][$this->_index + 1];
+			$step['hidden'] = $this->isHidden($step['url']);
 			$step['disabled'] = $this->isDisabled($step['url']);
 			return $step;
 		}
@@ -169,6 +181,7 @@ class WizardComponent extends Component {
 	public function getPreviousStep() {
 		for ($i = $this->_index - 1; $i >= 0; $i--) {
 			$step = $this->config['steps'][$i];
+			$step['hidden'] = $this->isHidden($step['url']);
 			$step['disabled'] = $this->isDisabled($step['url']);
 			if (!$step['disabled']) {
 				return $step;
