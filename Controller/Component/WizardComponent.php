@@ -268,9 +268,33 @@ class WizardComponent extends Component {
 			if ($index > $this->_index) {
 				break;
 			}
-			$data = Hash::merge($data, $this->data($index));
+
+			$stepData = $this->data($index);
+			if (!$stepData) {
+				break;
+			}
+			$data = Hash::merge(
+				$data,
+				$this->_array_diff_key_recursive($stepData, $data)
+			);
 		}
 		return $data;
+	}
+
+	protected function _array_diff_key_recursive($array1, $array2) {
+		$result = array();
+		foreach ($array1 as $key => $val) {
+			if (is_array($val)) {
+				if (array_key_exists($key, $array2) && is_array($array2[$key])) {
+					$result[$key] = $this->_array_diff_key_recursive($array1[$key], $array2[$key]);
+				} else {
+					$result[$key] = $this->_array_diff_key_recursive($array1[$key], $array2);
+				}
+			} else {
+				$result = array_diff_key($array1, $array2);
+			}
+		}
+		return $result;
 	}
 
 }
