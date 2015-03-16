@@ -58,44 +58,31 @@ class WizardComponent extends Component {
 			return $this->controller->redirect($expectedStep['url']);
 		}
 
-		$this->request->data = Hash::merge($this->data(), $this->request->data);
-
 		if ($this->request->is(array('post', 'put')) || $this->isDisabled($this->request->here)) {
-			return $this->process($this->request->here);
+			$this->process($this->request->here);
 		}
-	}
-
-	public function isHidden($url) {
-		$step = $this->getStep($url);
-		if (is_callable($step['hidden'])) {
-			$step['hidden'] = call_user_func($step['hidden']);
-		}
-		return (bool)$step['hidden'];
-	}
-
-	public function isDisabled($url) {
-		$step = $this->getStep($url);
-		if (is_callable($step['disabled'])) {
-			$step['disabled'] = call_user_func($step['disabled']);
-		}
-		return (bool)$step['disabled'];
+		$this->request->data = Hash::merge($this->data(), $this->request->data);
 	}
 
 	public function process($url) {
-		if (!$this->isStep($url) || !$this->_canAccessStep($url)) {
+		if (!$this->_canAccessStep($url)) {
 			$expectedStep = $this->getExpectedStep();
 			return $this->controller->redirect($expectedStep['url']);
 		}
 
-		$callback = sprintf('_process_%s', $this->request->params['action']);
+		$this->data($this->_index, $this->request->data);
+
+		$callback = sprintf('_process_%s', $this->request->param('action'));
 		if (method_exists($this->controller, $callback)) {
-			$result = $this->controller->$callback();
+			$result = $this->controller->$callback($this);
 			if ($result === false) {
 				return false;
 			}
+
+			// Save modifications bade by callback
+			$this->data($this->_index, $this->request->data);
 		}
 
-		$this->data($this->_index, $this->request->data);
 		$this->data('lastCompletedStep', $this->_index);
 
 		$nextStep = $this->getNextStep();
@@ -119,6 +106,22 @@ class WizardComponent extends Component {
 		unset($options['action']);
 
 		$this->config['steps'][] = $options;
+	}
+
+	public function isHidden($url) {
+		$step = $this->getStep($url);
+		if (is_callable($step['hidden'])) {
+			$step['hidden'] = call_user_func($step['hidden']);
+		}
+		return (bool)$step['hidden'];
+	}
+
+	public function isDisabled($url) {
+		$step = $this->getStep($url);
+		if (is_callable($step['disabled'])) {
+			$step['disabled'] = call_user_func($step['disabled']);
+		}
+		return (bool)$step['disabled'];
 	}
 
 	public function getStep($url) {
@@ -220,6 +223,11 @@ class WizardComponent extends Component {
 		return $this->Session->write($key, $val);
 	}
 
+	public function get($name) {
+		$data = $this->data();
+		return Hash::get($data, $name);
+	}
+
 	public function reset() {
 		return $this->Session->delete($this->config['sessionKey']);
 	}
@@ -275,26 +283,10 @@ class WizardComponent extends Component {
 			}
 			$data = Hash::merge(
 				$data,
-				$this->_array_diff_key_recursive($stepData, $data)
+				$stepData
 			);
 		}
 		return $data;
-	}
-
-	protected function _array_diff_key_recursive($array1, $array2) {
-		$result = array();
-		foreach ($array1 as $key => $val) {
-			if (is_array($val)) {
-				if (array_key_exists($key, $array2) && is_array($array2[$key])) {
-					$result[$key] = $this->_array_diff_key_recursive($array1[$key], $array2[$key]);
-				} else {
-					$result[$key] = $this->_array_diff_key_recursive($array1[$key], $array2);
-				}
-			} else {
-				$result = array_diff_key($array1, $array2);
-			}
-		}
-		return $result;
 	}
 
 }
