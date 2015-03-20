@@ -70,8 +70,6 @@ class WizardComponent extends Component {
 			return $this->controller->redirect($expectedStep['url']);
 		}
 
-		$this->data($this->_index, $this->request->data);
-
 		$callback = sprintf('_process_%s', $this->request->param('action'));
 		if (method_exists($this->controller, $callback)) {
 			$result = $this->controller->$callback($this);
@@ -79,10 +77,11 @@ class WizardComponent extends Component {
 				return false;
 			}
 
-			// Save modifications bade by callback
+			// Save modifications made by callback
 			$this->data($this->_index, $this->request->data);
 		}
 
+		$this->data($this->_index, $this->request->data);
 		$this->data('lastCompletedStep', $this->_index);
 
 		$nextStep = $this->getNextStep();
