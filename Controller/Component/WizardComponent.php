@@ -78,11 +78,11 @@ class WizardComponent extends Component {
 			}
 
 			// Save modifications made by callback
-			$this->data($this->_index, $this->request->data);
+			$this->_write($this->_index, $this->request->data);
 		}
 
-		$this->data($this->_index, $this->request->data);
-		$this->data('lastCompletedStep', $this->_index);
+		$this->_write($this->_index, $this->request->data);
+		$this->_write('lastCompletedStep', $this->_index);
 
 		$nextStep = $this->getNextStep();
 		if ($nextStep) {
@@ -160,7 +160,7 @@ class WizardComponent extends Component {
  * @return array
  */
 	public function getExpectedStep() {
-		$index = $this->data('lastCompletedStep');
+		$index = $this->_read('lastCompletedStep');
 		if (!is_numeric($index)) {
 			return $this->config['steps'][0];
 		}
@@ -210,21 +210,22 @@ class WizardComponent extends Component {
 		return false;
 	}
 
-	public function data($key = null, $val = null) {
+	public function data($key = null) {
+		$data = $this->_getWizardData();
 		if ($key === null) {
-			return $this->_mergedRequestData();
+			return $data;
 		}
+		return Hash::get($data, $key);
+	}
 
+	protected function _write($key, $val) {
 		$key = implode('.', array($this->config['sessionKey'], $key));
-		if ($val === null) {
-			return $this->Session->read($key);
-		}
 		return $this->Session->write($key, $val);
 	}
 
-	public function get($name) {
-		$data = $this->data();
-		return Hash::get($data, $name);
+	protected function _read($key) {
+		$key = implode('.', array($this->config['sessionKey'], $key));
+		return $this->Session->read($key);
 	}
 
 	public function reset() {
@@ -269,14 +270,14 @@ class WizardComponent extends Component {
 		return false;
 	}
 
-	protected function _mergedRequestData() {
+	protected function _getWizardData() {
 		$data = array();
 		foreach ($this->config['steps'] as $index => $step) {
 			if ($index > $this->_index) {
 				break;
 			}
 
-			$stepData = $this->data($index);
+			$stepData = $this->_read($index);
 			if (!$stepData) {
 				break;
 			}
