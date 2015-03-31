@@ -49,18 +49,22 @@ class WizardComponent extends Component {
 	}
 
 	public function startup(Controller $controller) {
+		if (!$this->isStep($this->request->here)) {
+			$this->_index = $this->_read('lastCompletedStep');
+			return;
+		}
+
 		if (!$this->_setStep($this->request->here)) {
 			return false;
 		}
-
 		if (!$this->_canAccessStep($this->request->here)) {
 			$expectedStep = $this->getExpectedStep();
 			return $this->controller->redirect($expectedStep['url']);
 		}
-
 		if ($this->request->is(array('post', 'put')) || $this->isDisabled($this->request->here)) {
 			$this->process($this->request->here);
 		}
+
 		$this->request->data = Hash::merge($this->data(), $this->request->data);
 	}
 
