@@ -106,7 +106,6 @@ class WizardComponent extends Component {
 		$options['url'] = Router::url(array(
 			'action' => $options['action']
 		));
-		unset($options['action']);
 
 		$this->config['steps'][] = $options;
 	}
@@ -139,6 +138,7 @@ class WizardComponent extends Component {
  * Returns an array of visible steps with some meta data (completed, active)
  */
 	public function getSteps() {
+		$stepNum = 1;
 		$steps = $this->config['steps'];
 		foreach ($steps as $index => $step) {
 			$steps[$index]['hidden'] = $this->isHidden($step['url']);
@@ -148,11 +148,14 @@ class WizardComponent extends Component {
 			}
 
 			$steps[$index] += array(
+				'step' => $stepNum,
 				'completed' => $index < $this->_index,
 				'active' => $index == $this->_index
 			);
 
 			$steps[$index]['disabled'] = $this->isDisabled($step['url']);
+
+			$stepNum++;
 		}
 		return array_values($steps);
 	}
@@ -172,6 +175,10 @@ class WizardComponent extends Component {
 			return $this->config['steps'][$index + 1];
 		}
 		return $this->config['steps'][$index];
+	}
+
+	public function getCurrentStep() {
+		return $this->getStep($this->request->here);
 	}
 
 	public function getNextStep() {
